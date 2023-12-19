@@ -10,18 +10,22 @@ R1 = []; %Secretion or uptake rate for donor 1
 R2 = []; %Secretion or uptake rate for donor 2
 R3 = []; %Secretion or uptake rate for donor 3
 R4 = []; %Secretion or uptake rate for donor 4
+R2_8 = []; %Secretion or uptake rate for donors 2 and 8
 S1 = ones(size(P1D1))*1e9; %Score for donor 1
 S2 = ones(size(P1D2))*1e9; %Score for donor 2
 S3 = ones(size(P1D3))*1e9; %Score for donor 3
 S4 = ones(size(P1D4))*1e9; %Score for donor 4
+S2_8 = ones(size(P1D2_8))*1e9; %Score for donors 2 and 8
 Fitted1 = []; %Simulated nM values for donor 1
 Fitted2 = []; %Simulated nM values for donor 2
 Fitted3 = []; %Simulated nM values for donor 3
 Fitted4 = []; %Simulated nM values for donor 4
+Fitted2_8 = []; %Simulated nM values for donors 2 and 8
 r1 = []; %Secretion or uptake rate for donor 1 over first 24 hours
 r2 = []; %Secretion or uptake rate for donor 2 over first 24 hours
 r3 = []; %Secretion or uptake rate for donor 3 over first 24 hours
 r4 = []; %Secretion or uptake rate for donor 4 over first 24 hours
+r2_8 = []; %Secretion or uptake rate for donors 5 and 7 over first 24 hours
 
 %Donor1
 for j = size(P1D1,2):-1:1 %samples
@@ -114,14 +118,14 @@ end
 
 %Donor4
 for j = size(P1D4,2):-1:1 %samples
-    for m = size(P1D4,1):-1:1 %all amino acids, glucose, lactate, pyruvate, hydroxyproline, myo-inositol, ammonia
+    for m = size(P1D4,1):-1:1 %all amino acids, glucose, lactate, pyruvate, hydroxyproline, myo-inositol, ammonia, mucleobases
         for i = 1:150
             constantsv = constantD4(j,:);
             Mfv = Mf(m,4); %nM in fresh media RPMI
             Observed = [P2D4(m,j); P3D4(m,j)]; %experimental nmoles
             P1v = P1D4(m,j);
             Rus0 = -100+200*rand(1,1);
-            A = Mf(m,5); %constraints: R<1 for essential amino acids and glucose, R>1 for alanine, glutamate, lactate, pyruvate, ammonia
+            A = Mf(m,5); %constraints: R<1 for essential amino acids and glucose, R>1 for alanine, glutamate, lactate, pyruvate, ammonia, nucleobases
             b = 0;
             Aeq = [];
             beq = [];
@@ -140,8 +144,38 @@ for j = size(P1D4,2):-1:1 %samples
             [~, ~, ~, ~, P0(m,j),P1(m,j),P1s(m,j),P2(m,j),P2s(m,j),P3(m,j)] = Rsim(x, Observed, constantsv, Mfv, P1v);
         end
     end  
+end 
+
+%Donor2and8
+for j = size(P1D2_8,2):-1:1 %samples
+    for m = size(P1D2_8,1):-1:1 %all amino acids, glucose, lactate, pyruvate, hydroxyproline, myo-inositol, ammonia
+        for i = 1:150
+            constantsv = constantD2_8(j,:);
+            Mfv = Mf(m,7); %nM in fresh media RPMI
+            Observed = [P2D2_8(m,j); P3D2_8(m,j)]; %experimental nmoles
+            P1v = P1D2_8(m,j);
+            Rus0 = -100+200*rand(1,1);
+            A = Mf(m,5); %constraints: R<1 for essential amino acids and glucose, R>1 for alanine, glutamate, lactate, pyruvate, ammonia
+            b = 0;
+            Aeq = [];
+            beq = [];
+
+            F = @(Rus)Rsim(Rus,Observed,constantsv,Mfv,P1v);
+
+            [x, fval] = fmincon(F,Rus0,A,b,Aeq,beq);
+
+            if fval < S2_8(m,j)                      
+                R2_8(m,j) = x;
+                S2_8(m,j) = fval;
+                [~, ~, Fitted2_8{m,j},r2_8(m,j)] = F(x);
+  
+            end
+                      
+            [~, ~, ~, ~, P0(m,j),P1(m,j),P1s(m,j),P2(m,j),P2s(m,j),P3(m,j)] = Rsim(x, Observed, constantsv, Mfv, P1v);
+        end
+    end  
 end
-                             
+        
 %% Score function
 function [score,vscore,Fitted,r,P0,P1,P1s,P2,P2s,P3] = Rsim(Rus, Observed_in, constantsv_in, Mfv_in, P1v_in)
         
